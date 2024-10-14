@@ -5,6 +5,25 @@ type FunctionDefault<T> = { type: "function"; fn: () => T };
 
 type FieldType = "string" | "number" | "boolean" | "date";
 
+type FieldDefinition<T extends FieldType> = {
+  type: T;
+  primaryKey?: boolean;
+  unique?: boolean;
+  default?: DefaultValueForType<T>;
+};
+
+const fieldSymbol = Symbol("__isField");
+
+type FieldDefinitionWithMeta<
+  T extends FieldType,
+  HasDefault extends boolean,
+  IsPrimaryKey extends boolean
+> = FieldDefinition<T> & {
+  [fieldSymbol]: true;
+  hasDefault: HasDefault;
+  isPrimaryKey: IsPrimaryKey;
+};
+
 type ObjectStoreSchema = {
   fields: {
     [fieldName: string]: FieldDefinitionWithMeta<FieldType, boolean, boolean>;
@@ -78,6 +97,118 @@ type Versioning =
   | "auto"
   | { type: "auto" }
   | { type: "manual"; version: number };
+
+class QueryBuilder<T> {
+  private filters: { field: keyof T; operator: string; value: any }[] = [];
+  private sortField?: keyof T;
+  private sortOrder: "asc" | "desc" = "asc";
+  private limitCount?: number;
+  private offsetCount?: number;
+
+  constructor(private db: IDBDatabase, private storeName: string) {}
+
+  // Add a filter condition (where clause)
+  where(
+    field: keyof T,
+    operator: "equals" | "startsWith" | "endsWith",
+    value: any
+  ) {
+    this.filters.push({ field, operator, value });
+    return this;
+  }
+
+  // Sort the results by a field
+  orderBy(field: keyof T, order: "asc" | "desc" = "asc") {
+    this.sortField = field;
+    this.sortOrder = order;
+    return this;
+  }
+
+  // Limit the number of results
+  limit(count: number) {
+    this.limitCount = count;
+    return this;
+  }
+
+  // Skip a number of results (pagination)
+  offset(count: number) {
+    this.offsetCount = count;
+    return this;
+  }
+
+  async run(): Promise<T[]> {
+    return new Promise<T[]>((resolve, reject) => {
+      const transaction = this.db.transaction([this.storeName], "readonly");
+      const store = transaction.objectStore(this.storeName);
+
+      const request = store.openCursor();
+      const results: T[] = [];
+      let skipped = 0;
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+
+        if (cursor) {
+          const record = cursor.value;
+
+          if (this.applyFilters(record)) {
+            // Pagination (skip and limit)
+            if (this.offsetCount && skipped < this.offsetCount) {
+              skipped++;
+            } else {
+              results.push(record);
+              if (this.limitCount && results.length >= this.limitCount) {
+                resolve(this.applySorting(results));
+                return;
+              }
+            }
+          }
+
+          cursor.continue();
+        } else {
+          resolve(this.applySorting(results));
+        }
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  private applyFilters(record: T): boolean {
+    return this.filters.every(({ field, operator, value }) => {
+      const fieldValue = record[field];
+
+      switch (operator) {
+        case "equals":
+          return fieldValue === value;
+        case "startsWith":
+          return typeof fieldValue === "string" && fieldValue.startsWith(value);
+        case "endsWith":
+          return typeof fieldValue === "string" && fieldValue.endsWith(value);
+        default:
+          return true;
+      }
+    });
+  }
+
+  private applySorting(results: T[]): T[] {
+    if (!this.sortField) {
+      return results; // No sorting needed
+    }
+
+    return results.sort((a, b) => {
+      const aValue = a[this.sortField!];
+      const bValue = b[this.sortField!];
+
+      if (aValue === bValue) return 0;
+
+      if (this.sortOrder === "asc") {
+        return aValue > bValue ? 1 : -1;
+      }
+      return aValue < bValue ? 1 : -1;
+    });
+  }
+}
 
 export type BackupData<S extends Schema> = {
   [K in keyof S]?: S[K]["fields"][];
@@ -748,25 +879,6 @@ export class ORM<S extends Schema> {
   }
 }
 
-type FieldDefinition<T extends FieldType> = {
-  type: T;
-  primaryKey?: boolean;
-  unique?: boolean;
-  default?: DefaultValueForType<T>;
-};
-
-const fieldSymbol = Symbol("__isField");
-
-type FieldDefinitionWithMeta<
-  T extends FieldType,
-  HasDefault extends boolean,
-  IsPrimaryKey extends boolean
-> = FieldDefinition<T> & {
-  [fieldSymbol]: true;
-  hasDefault: HasDefault;
-  isPrimaryKey: IsPrimaryKey;
-};
-
 export function field<
   T extends FieldType,
   U extends DefaultValueForType<T> | undefined = undefined,
@@ -847,118 +959,6 @@ export function defineSchema<T extends Schema>(schema: T): T {
   }
 
   return schema;
-}
-
-class QueryBuilder<T> {
-  private filters: { field: keyof T; operator: string; value: any }[] = [];
-  private sortField?: keyof T;
-  private sortOrder: "asc" | "desc" = "asc";
-  private limitCount?: number;
-  private offsetCount?: number;
-
-  constructor(private db: IDBDatabase, private storeName: string) {}
-
-  // Add a filter condition (where clause)
-  where(
-    field: keyof T,
-    operator: "equals" | "startsWith" | "endsWith",
-    value: any
-  ) {
-    this.filters.push({ field, operator, value });
-    return this;
-  }
-
-  // Sort the results by a field
-  orderBy(field: keyof T, order: "asc" | "desc" = "asc") {
-    this.sortField = field;
-    this.sortOrder = order;
-    return this;
-  }
-
-  // Limit the number of results
-  limit(count: number) {
-    this.limitCount = count;
-    return this;
-  }
-
-  // Skip a number of results (pagination)
-  offset(count: number) {
-    this.offsetCount = count;
-    return this;
-  }
-
-  async run(): Promise<T[]> {
-    return new Promise<T[]>((resolve, reject) => {
-      const transaction = this.db.transaction([this.storeName], "readonly");
-      const store = transaction.objectStore(this.storeName);
-
-      const request = store.openCursor();
-      const results: T[] = [];
-      let skipped = 0;
-
-      request.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-
-        if (cursor) {
-          const record = cursor.value;
-
-          if (this.applyFilters(record)) {
-            // Pagination (skip and limit)
-            if (this.offsetCount && skipped < this.offsetCount) {
-              skipped++;
-            } else {
-              results.push(record);
-              if (this.limitCount && results.length >= this.limitCount) {
-                resolve(this.applySorting(results));
-                return;
-              }
-            }
-          }
-
-          cursor.continue();
-        } else {
-          resolve(this.applySorting(results));
-        }
-      };
-
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  private applyFilters(record: T): boolean {
-    return this.filters.every(({ field, operator, value }) => {
-      const fieldValue = record[field];
-
-      switch (operator) {
-        case "equals":
-          return fieldValue === value;
-        case "startsWith":
-          return typeof fieldValue === "string" && fieldValue.startsWith(value);
-        case "endsWith":
-          return typeof fieldValue === "string" && fieldValue.endsWith(value);
-        default:
-          return true;
-      }
-    });
-  }
-
-  private applySorting(results: T[]): T[] {
-    if (!this.sortField) {
-      return results; // No sorting needed
-    }
-
-    return results.sort((a, b) => {
-      const aValue = a[this.sortField!];
-      const bValue = b[this.sortField!];
-
-      if (aValue === bValue) return 0;
-
-      if (this.sortOrder === "asc") {
-        return aValue > bValue ? 1 : -1;
-      }
-      return aValue < bValue ? 1 : -1;
-    });
-  }
 }
 
 const $debug = (...args: any[]) => {
