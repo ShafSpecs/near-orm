@@ -1,13 +1,16 @@
 {
   "name": "near-orm",
+  "type": "module",
   "description": "A simple ORM for IndexedDB",
   "version": "0.1.0",
   "main": "./orm.js",
+  "module": "./orm.js",
   "types": "./orm.d.ts",
   "scripts": {
-    "build": "rimraf ./orm.js ./orm.d.ts && tsc",
+    "build": "rimraf ./orm.js ./orm.d.ts && tsc && node ./minify.js",
     "prepublishOnly": "npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run --coverage",
+    "test:watch": "vitest"
   },
   "repository": {
     "type": "git",
@@ -30,6 +33,7 @@
     "fake-indexeddb": "^6.0.0",
     "pkg-pr-new": "^0.0.29",
     "rimraf": "^6.0.1",
+    "terser": "^5.34.1",
     "typescript": "^5.6.2",
     "vitest": "^2.1.2"
   },
@@ -41,5 +45,8 @@
     "db",
     "indexeddb-orm"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "sideEffects": false
 }
