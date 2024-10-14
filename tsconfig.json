@@ -4,13 +4,14 @@
     "baseUrl": ".",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "moduleResolution": "NodeNext",
+    "module": "NodeNext",
     "target": "ES2022",
     "skipLibCheck": true,
     "declaration": true,
-    "outDir": "./dist",
+    "outDir": ".",
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["./**/*.ts"],
-  "exclude": ["dist", "./**/__tests__",  "./**/__test__", "node_modules"]
+  "include": ["./orm.ts"],
+  "exclude": ["dist", "./**/tests/**", "node_modules"]
 }
