@@ -3,11 +3,17 @@
   "description": "A simple ORM for IndexedDB",
   "version": "0.1.0",
   "main": "./orm.js",
+  "types": "./orm.d.ts",
   "scripts": {
     "build": "rimraf ./orm.js ./orm.d.ts && tsc",
     "prepublishOnly": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ShafSpecs/near-orm.git"
+  },
+  "license": "MIT",
   "author": {
     "name": "Abdur-Rahman Fashola",
     "url": "https://github.com/ShafSpecs"
@@ -17,7 +23,6 @@
     "orm.d.ts",
     "README.md"
   ],
-  "license": "MIT",
   "devDependencies": {
     "@biomejs/biome": "^1.9.3",
     "@types/node": "^22.7.4",
