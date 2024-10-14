@@ -98,10 +98,13 @@ type Versioning =
   | { type: "auto" }
   | { type: "manual"; version: number };
 
+type WhereOperator = "equals" | "startsWith" | "endsWith";
+type OrderByOperator = "asc" | "desc";
+
 class QueryBuilder<T> {
   private filters: { field: keyof T; operator: string; value: any }[] = [];
   private sortField?: keyof T;
-  private sortOrder: "asc" | "desc" = "asc";
+  private sortOrder: OrderByOperator = "asc";
   private limitCount?: number;
   private offsetCount?: number;
 
@@ -110,7 +113,7 @@ class QueryBuilder<T> {
   // Add a filter condition (where clause)
   where(
     field: keyof T,
-    operator: "equals" | "startsWith" | "endsWith",
+    operator: WhereOperator,
     value: any
   ) {
     this.filters.push({ field, operator, value });
@@ -118,7 +121,7 @@ class QueryBuilder<T> {
   }
 
   // Sort the results by a field
-  orderBy(field: keyof T, order: "asc" | "desc" = "asc") {
+  orderBy(field: keyof T, order: OrderByOperator = "asc") {
     this.sortField = field;
     this.sortOrder = order;
     return this;
@@ -249,7 +252,7 @@ export class ORM<S extends Schema> {
 
   #schemaLength = 0;
 
-  constructor(options: InitOptions<S>) {
+  private constructor(options: InitOptions<S>) {
     this.schema = options.schema;
     this.dbName = options.dbName || "defaultDB";
     this.versioning = options.versioning || "auto";
