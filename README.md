@@ -10,52 +10,52 @@
 - 🔄 Query builder
 - 🔒 Type-safe migrations
 
+<div id="toc"></div>
+
 ## Table of Content
 
-- [Near ORM](#near-orm)
-  - [Table of Content](#table-of-content)
-  - [Installation](#installation)
-  - [Quick Start](#quick-start)
-    - [Defining Schema](#defining-schema)
-    - [Initialising ORM](#initialising-orm)
-    - [CRUD Operations](#crud-operations)
-      - [Create](#create)
-      - [Update](#update)
-      - [Delete](#delete)
-      - [Read](#read)
-    - [Querying](#querying)
-    - [Migrations](#migrations)
-    - [Transactions](#transactions)
-    - [Seeding](#seeding)
-    - [Events](#events)
-    - [Going Raw](#going-raw)
-    - [Metadata](#metadata)
-  - [API Documentation](#api-documentation)
-    - [`init`](#init)
-    - [`defineSchema`](#defineschema)
-    - [`field`](#field)
-    - [`models`](#models)
-      - [`create`](#create-1)
-      - [`update`](#update-1)
-      - [`delete`](#delete-1)
-      - [`findById`](#findbyid)
-      - [`findAll`](#findall)
-    - [`query`](#query)
-    - [`QueryBuilder`](#querybuilder)
-      - [`where`](#where)
-      - [`orderBy`](#orderby)
-      - [`offset`](#offset)
-      - [`limit`](#limit)
-      - [`run`](#run)
-    - [`meta`](#meta)
-    - [`transaction`](#transaction)
-    - [`seed`](#seed)
-    - [`migrate`](#migrate)
-    - [`events`](#events-1)
-      - [`on`](#on)
-      - [`trigger`](#trigger)
-    - [`raw`](#raw)
-  - [License](#license)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+  - [Defining Schema](#defining-schema)
+  - [Initialising ORM](#initialising-orm)
+  - [CRUD Operations](#crud-operations)
+    - [Create](#create)
+    - [Update](#update)
+    - [Delete](#delete)
+    - [Read](#read)
+  - [Querying](#querying)
+  - [Migrations](#migrations)
+  - [Transactions](#transactions)
+  - [Seeding](#seeding)
+  - [Events](#events)
+  - [Going Raw](#going-raw)
+  - [Metadata](#metadata)
+- [API Documentation](#api-documentation)
+  - [`init`](#init)
+  - [`defineSchema`](#defineschema)
+  - [`field`](#field)
+  - [`models`](#models)
+    - [`create`](#create-1)
+    - [`update`](#update-1)
+    - [`delete`](#delete-1)
+    - [`findById`](#findbyid)
+    - [`findAll`](#findall)
+  - [`query`](#query)
+  - [`QueryBuilder`](#querybuilder)
+    - [`where`](#where)
+    - [`orderBy`](#orderby)
+    - [`offset`](#offset)
+    - [`limit`](#limit)
+    - [`run`](#run)
+  - [`meta`](#meta)
+  - [`transaction`](#transaction)
+  - [`seed`](#seed)
+  - [`migrate`](#migrate)
+  - [`events`](#events-1)
+    - [`on`](#on)
+    - [`trigger`](#trigger)
+  - [`raw`](#raw)
+- [License](#license)
 
 ## Installation
 
@@ -152,6 +152,8 @@ const users = await db.models.users.findAll()
 ```
 
 This fetches all records from the `users` table.
+
+[⬆️ Back to top](#toc)
 
 ### Querying
 
@@ -259,6 +261,8 @@ await db.seed({
 
 This would create two new records within your `users` table.
 
+[⬆️ Back to top](#toc)
+
 ### Events
 
 Events are a way to listen to changes within your database. This is useful for updating the UI or performing other actions when a record is created, updated, deleted, etc.
@@ -341,6 +345,8 @@ This would return an object that resembles:
 
 If you find this package useful, please consider [sponsoring this project](https://github.com/sponsors/ShafSpecs)!
 
+[⬆️ Back to top](#toc)
+
 ## API Documentation
 
 Always remember that NearORM is built on top of IndexedDB, which utilises asynchronous APIs for all its operations.
@@ -385,6 +391,8 @@ const db = await ORM.init({
 });
 ```
 
+[⬆️ Back to top](#toc)
+
 ### `defineSchema`
 
 Allows you to create a NearORM-compliant schema.
@@ -402,6 +410,8 @@ import { defineSchema, field } from "near-orm";
 
 const schema = defineSchema({ /* ... */ });
 ```
+
+[⬆️ Back to top](#toc)
 
 ### `field`
 
@@ -447,6 +457,8 @@ Depending on the `type` of your field, `default` supports:
 - `"static"`: Allows you to pass a static value - like an enum (must be of the same type as your field).
 
 Some field types, like `number`, support "autoincrement", whilst the rest don't.
+
+[⬆️ Back to top](#toc)
 
 ### `models`
 
@@ -504,6 +516,8 @@ Gets all records in your table.
 const users = await db.models['name-of-your-table'].findAll()
 ```
 
+[⬆️ Back to top](#toc)
+
 ### `query`
 
 Returns a [`QueryBuilder`](#querybuilder) that enables you to filter, sort and paginate records within a table.
@@ -526,6 +540,8 @@ const users = await db
   .orderBy('createdAt', 'desc')
   .run()
 ```
+
+[⬆️ Back to top](#toc)
 
 ### `QueryBuilder`
 
@@ -644,6 +660,8 @@ const users = await db
 
 > Got an idea for a new query method? Feel free to open an [issue](https://github.com/ShafSpecs/near-orm/issues)
 
+[⬆️ Back to top](#toc)
+
 ### `meta`
 
 Returns a metadata overview of your database, including size, indexes and column count.
@@ -660,6 +678,8 @@ meta(): Promise<Record<string, any>>
 const meta = await db.meta()
 ```
 
+[⬆️ Back to top](#toc)
+
 ### `transaction`
 
 A utility method that allows you to perform a transaction across multiple stores.
@@ -672,6 +692,8 @@ await db.transaction(async (trx) => {
   await trx.posts.create({ id: '1', title: 'Hello World', content: 'This is my first post', authorId: '1' })
 })
 ```
+
+[⬆️ Back to top](#toc)
 
 ### `seed`
 
@@ -692,6 +714,8 @@ await db.seed({
 })
 ```
 
+[⬆️ Back to top](#toc)
+
 ### `migrate`
 
 A method that allows you to manually migrate your database to a new version. Re-applying the new schema to the database, and updating the version number.
@@ -710,6 +734,8 @@ migrate(version: number): Promise<void>
 ```ts
 await db.migrate(2)
 ```
+
+[⬆️ Back to top](#toc)
 
 ### `events`
 
@@ -759,6 +785,8 @@ trigger(
 db.events.trigger('create', 'users', { id: '1', name: 'Abbad', email: 'abbad@example.com' })
 ```
 
+[⬆️ Back to top](#toc)
+
 ### `raw`
 
 Returns the underlying `IDBDatabase` instance for low-level or non-standard operations.
@@ -777,6 +805,8 @@ raw(): IDBDatabase
 ```ts
 const idb = db.raw()
 ```
+
+[⬆️ Back to top](#toc)
 
 ## License
 
