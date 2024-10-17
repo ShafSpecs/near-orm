@@ -446,61 +446,6 @@ export class ORM<S extends Schema> {
     return result;
   }
 
-  async backup(): Promise<BackupData<S>> {
-    const transaction = this.db.transaction(
-      Object.keys(this.schema),
-      "readonly"
-    );
-
-    const backupData: BackupData<S> = {};
-
-    return new Promise((resolve, reject) => {
-      for (const storeName of Object.keys(this.schema)) {
-        const store = transaction.objectStore(storeName);
-
-        const request = store.getAll();
-        request.onsuccess = () => {
-          backupData[storeName as keyof S] = request.result;
-          if (
-            Object.keys(backupData).length === Object.keys(this.schema).length
-          ) {
-            resolve(backupData);
-          }
-        };
-
-        request.onerror = () => reject(request.error);
-      }
-    });
-  }
-
-  async restore(backupData: BackupData<S>): Promise<void> {
-    const transaction = this.db.transaction(
-      Object.keys(this.schema),
-      "readwrite"
-    );
-
-    return new Promise((resolve, reject) => {
-      for (const storeName of Object.keys(backupData)) {
-        const store = transaction.objectStore(storeName);
-
-        for (const record of backupData[storeName]!) {
-          const request = store.put(record);
-          request.onerror = () => reject(request.error);
-        }
-      }
-
-      transaction.oncomplete = () => {
-        this.debug("Database restored from backup successfully");
-        resolve();
-      };
-
-      transaction.onerror = (event) => {
-        this.debug("Transaction failed during restore", event);
-        reject(transaction.error);
-      };
-    });
-  }
-
   raw(): IDBDatabase {
     return this.db;
   }
