@@ -85,7 +85,7 @@ type UpdateInput<T extends ObjectStoreSchema> = Partial<
 
 type IdType<T extends ObjectStoreSchema> = PrimaryKey<T>[keyof PrimaryKey<T>];
 
-type ModelMethods<T extends ObjectStoreSchema> = {
+export type ModelMethods<T extends ObjectStoreSchema> = {
   create: (data: CreateInput<T>) => Promise<InferModelShape<T>>;
   findMany: () => Promise<InferModelShape<T>[]>;
   findById: (id: IdType<T>) => Promise<InferModelShape<T> | undefined>;
