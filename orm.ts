@@ -87,16 +87,13 @@ type IdType<T extends ObjectStoreSchema> = PrimaryKey<T>[keyof PrimaryKey<T>];
 
 export type ModelMethods<T extends ObjectStoreSchema> = {
   create: (data: CreateInput<T>) => Promise<InferModelShape<T>>;
-  findMany: () => Promise<InferModelShape<T>[]>;
+  findAll: () => Promise<InferModelShape<T>[]>;
   findById: (id: IdType<T>) => Promise<InferModelShape<T> | undefined>;
   update: (id: IdType<T>, data: UpdateInput<T>) => Promise<InferModelShape<T>>;
   delete: (id: IdType<T>) => Promise<void>;
 };
 
-type Versioning =
-  | "auto"
-  | { type: "auto" }
-  | { type: "manual"; version: number };
+type Versioning = { type: "auto" } | { type: "manual"; version: number };
 
 type WhereOperator = "equals" | "startsWith" | "endsWith";
 type OrderByOperator = "asc" | "desc";
@@ -111,11 +108,7 @@ class QueryBuilder<T> {
   constructor(private db: IDBDatabase, private storeName: string) {}
 
   // Add a filter condition (where clause)
-  where(
-    field: keyof T,
-    operator: WhereOperator,
-    value: any
-  ) {
+  where(field: keyof T, operator: WhereOperator, value: any) {
     this.filters.push({ field, operator, value });
     return this;
   }
@@ -255,12 +248,23 @@ export class ORM<S extends Schema> {
   private constructor(options: InitOptions<S>) {
     this.schema = options.schema;
     this.dbName = options.dbName || "defaultDB";
-    this.versioning = options.versioning || "auto";
+    this.versioning = options.versioning || { type: "auto" };
     this.migrations = options.migrations;
     // Custom loggers later on??
     this.debug = options.debug ? $debug : () => {};
   }
 
+  /**
+   * Initializes a new `ORM` instance.
+   *
+  //  * @param {InitOptions<S>} options - Configuration options for initializing the ORM, including the schema, database name, versioning strategy, migrations, and debug flag.
+   * @param {S} options.schema - The schema of the database.
+   * @param {string} [options.dbName] - The name of the database.
+   * @param {Versioning} [options.versioning] - The versioning strategy for the database.
+   * @param {(oldVersion: number, newVersion: number, db: IDBDatabase) => void} [options.migrations] - The callback for the manual version migration.
+   * @param {boolean} [options.debug] - Wether to enable debug logs
+   * @returns {Promise<ORM<S>>} A promise that resolves to the initialized ORM instance.
+   */
   static async init<S extends Schema>(
     options: InitOptions<S>
   ): Promise<ORM<S>> {
@@ -313,6 +317,12 @@ export class ORM<S extends Schema> {
     return new QueryBuilder<S[K]["fields"]>(this.db, storeName as string);
   }
 
+  /**
+   * Seed the database with mock data. This is useful for debugging purposes or creating
+   * placeholder records.
+   *
+   * @param data
+   */
   async seed(data: { [K in keyof S]?: InferModelShape<S[K]>[] }) {
     const transaction = this.db.transaction(
       Object.keys(this.schema),
@@ -342,6 +352,9 @@ export class ORM<S extends Schema> {
     });
   }
 
+  /**
+   * Returns metadata about your database, including size, records and indexes.
+   */
   async meta(): Promise<{
     version: number;
     stores: {
@@ -576,10 +589,7 @@ export class ORM<S extends Schema> {
   }
 
   private getTargetVersion(): number {
-    if (
-      this.versioning === "auto" ||
-      (this.versioning && this.versioning.type === "auto")
-    ) {
+    if (this.versioning && this.versioning.type === "auto") {
       return this.calculateSchemaVersion();
     }
 
@@ -605,11 +615,7 @@ export class ORM<S extends Schema> {
   }
 
   private isAutoVersioning(): boolean {
-    return (
-      (this.versioning === "auto" ||
-        (this.versioning && this.versioning.type === "auto")) ??
-      false
-    );
+    return (this.versioning && this.versioning.type === "auto") ?? false;
   }
 
   private async migrateDatabase(targetVersion: number) {
@@ -729,7 +735,7 @@ export class ORM<S extends Schema> {
         });
       },
 
-      findMany: async (): Promise<InferModelShape<S[K]>[]> => {
+      findAll: async (): Promise<InferModelShape<S[K]>[]> => {
         return new Promise((resolve, reject) => {
           let transaction: IDBTransaction;
           if (__transaction) {
@@ -882,6 +888,12 @@ export class ORM<S extends Schema> {
   }
 }
 
+/**
+ * Defines a field with metadata based on the provided field definition.
+ * @param definition The field definition including type, primary key, unique, and default value.
+ * @returns The field definition with metadata inserted.
+ * @throws Error if the primary key type is not "number", "string", or "date", or if an invalid default type is provided.
+ */
 export function field<
   T extends FieldType,
   U extends DefaultValueForType<T> | undefined = undefined,
@@ -950,6 +962,12 @@ export function field<
   >;
 }
 
+/**
+ * Utility to define a valid schema for the database.
+ *
+ * @param schema The schema to be validated and converted into a valid schema.
+ * @returns The validated schema.
+ */
 export function defineSchema<T extends Schema>(schema: T): T {
   for (const [storeName, store] of Object.entries(schema)) {
     for (const [fieldName, fieldDef] of Object.entries(store.fields)) {
