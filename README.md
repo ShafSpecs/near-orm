@@ -56,7 +56,6 @@
     - [`trigger`](#trigger)
   - [`raw`](#raw)
 - [License](#license)
-
 ## Installation
 
 ```bash
@@ -69,7 +68,7 @@ This section provides a quick overview of how to get started with NearORM.
 
 ### Defining Schema
 
-Like Prisma, you define your database schema before initialising it. In NearORM, you do this using the `defineSchema` function.
+Like Prisma, you define your database schema before initialising it. In NearORM, you do this using the [`defineSchema`](#defineschema) function.
 
 ```ts
 import { defineSchema, field } from "near-orm";
@@ -97,7 +96,7 @@ import { ORM } from "near-orm";
 const db = await ORM.init({ schema });
 ```
 
-`init` returns an `ORM` instance, which you can use to interact with your database. // TODO: Add more details
+[`init`](#init) returns an `ORM` instance, which you can use to interact with your database.
 
 ### CRUD Operations
 
