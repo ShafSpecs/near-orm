@@ -9,6 +9,14 @@
 - 🧩 Schema definition
 - 🔄 Query builder
 - 🔒 Type-safe migrations
+- 📡 Event system
+
+**What's new in v0.3.0?**
+
+- Seeding your database now triggers the `create` event for each record seeded.
+- Added the `once` method to the event system, allowing you to listen to an event once.
+- Added the `off` method to the event system, allowing you to unsubscribe from an event.
+- Returns an unsubscribe function from the `on` method, allowing you to clean up effectively.
 
 <div id="toc"></div>
 
@@ -16,46 +24,49 @@
 
 - [Installation](#installation)
 - [Quick Start](#quick-start)
-  - [Defining Schema](#defining-schema)
-  - [Initialising ORM](#initialising-orm)
-  - [CRUD Operations](#crud-operations)
-    - [Create](#create)
-    - [Update](#update)
-    - [Delete](#delete)
-    - [Read](#read)
-  - [Querying](#querying)
-  - [Migrations](#migrations)
-  - [Transactions](#transactions)
-  - [Seeding](#seeding)
-  - [Events](#events)
-  - [Going Raw](#going-raw)
-  - [Metadata](#metadata)
+   - [Defining Schema](#defining-schema)
+   - [Initialising ORM](#initialising-orm)
+   - [CRUD Operations](#crud-operations)
+      - [Create](#create)
+      - [Update](#update)
+      - [Delete](#delete)
+      - [Read](#read)
+   - [Querying](#querying)
+   - [Migrations](#migrations)
+   - [Transactions](#transactions)
+   - [Seeding](#seeding)
+   - [Events](#events)
+   - [Going Raw](#going-raw)
+   - [Metadata](#metadata)
 - [API Documentation](#api-documentation)
-  - [`init`](#init)
-  - [`defineSchema`](#defineschema)
-  - [`field`](#field)
-  - [`models`](#models)
-    - [`create`](#create-1)
-    - [`update`](#update-1)
-    - [`delete`](#delete-1)
-    - [`findById`](#findbyid)
-    - [`findAll`](#findall)
-  - [`query`](#query)
-  - [`QueryBuilder`](#querybuilder)
-    - [`where`](#where)
-    - [`orderBy`](#orderby)
-    - [`offset`](#offset)
-    - [`limit`](#limit)
-    - [`run`](#run)
-  - [`meta`](#meta)
-  - [`transaction`](#transaction)
-  - [`seed`](#seed)
-  - [`migrate`](#migrate)
-  - [`events`](#events-1)
-    - [`on`](#on)
-    - [`trigger`](#trigger)
-  - [`raw`](#raw)
+   - [`init`](#init)
+   - [`defineSchema`](#defineschema)
+   - [`field`](#field)
+   - [`models`](#models)
+      - [`create`](#create-1)
+      - [`update`](#update-1)
+      - [`delete`](#delete-1)
+      - [`findById`](#findbyid)
+      - [`findAll`](#findall)
+   - [`query`](#query)
+   - [`QueryBuilder`](#querybuilder)
+      - [`where`](#where)
+      - [`orderBy`](#orderby)
+      - [`offset`](#offset)
+      - [`limit`](#limit)
+      - [`run`](#run)
+   - [`meta`](#meta)
+   - [`transaction`](#transaction)
+   - [`seed`](#seed)
+   - [`migrate`](#migrate)
+   - [`events`](#events-1)
+      - [`on`](#on)
+      - [`trigger`](#trigger)
+      - [`off`](#off)
+      - [`once`](#once)
+   - [`raw`](#raw)
 - [License](#license)
+
 ## Installation
 
 ```bash
@@ -742,7 +753,7 @@ Events are a way to listen to changes within your database. This is useful for u
 
 #### `on`
 
-Listens to events within your database.
+Listens to events within your database. It returns a function that allows you to unsubscribe from the event.
 
 **Signature:**
 
@@ -750,15 +761,19 @@ Listens to events within your database.
 on(
   eventName: "create" | "update" | "delete",
   callback: (storeName: string, record: any) => void
-): void
+): () => void
 ```
 
 **Example:**
 
 ```ts
-db.events.on('create', (storeName, data) => {
+const unsubscribe = db.events.on('create', (storeName, data) => {
   console.log(`New record created in ${storeName}:`, data);
 });
+
+// ...
+
+unsubscribe();
 ```
 
 #### `trigger`
@@ -782,6 +797,50 @@ trigger(
 
 ```ts
 db.events.trigger('create', 'users', { id: '1', name: 'Abbad', email: 'abbad@example.com' })
+```
+
+#### `off`
+
+Unsubscribes from an event.
+
+**Signature:**
+
+```ts
+off(eventName: "create" | "update" | "delete", callback: EventCallback<S>): void
+```
+
+**Example:**
+
+```ts
+const callback = (storeName, data) => {
+  console.log(`New record created in ${storeName}:`, data);
+}
+
+db.events.on('create', callback);
+
+// ...
+
+db.events.off('create', callback);
+```
+
+#### `once`
+
+Listens to an event once.
+
+**Signature:**
+
+```ts
+once(eventName: "create" | "update" | "delete", callback: EventCallback<S>): void
+```
+
+**Example:**
+
+```ts
+// Triggers the callback once, and then unsubscribes from the event
+// immediately after
+db.events.once('create', (storeName, data) => {
+  console.log(`New record created in ${storeName}:`, data);
+});
 ```
 
 [⬆️ Back to top](#toc)
