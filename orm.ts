@@ -337,6 +337,9 @@ export class ORM<S extends Schema> {
         for (const record of records) {
           const request = store.add(record);
           request.onerror = () => reject(request.error);
+          request.onsuccess = () => {
+            this.events.trigger("create", storeName, record);
+          };
         }
       }
 
@@ -451,26 +454,52 @@ export class ORM<S extends Schema> {
   }
 
   get events() {
+    const self = this;
     return {
       on: (
         eventName: "create" | "update" | "delete",
         callback: EventCallback<S>
       ) => {
-        if (!this.eventHandlers[eventName]) {
-          this.eventHandlers[eventName] = [];
+        if (!self.eventHandlers[eventName]) {
+          self.eventHandlers[eventName] = [];
         }
-        this.eventHandlers[eventName].push(callback);
+        const index = self.eventHandlers[eventName].length;
+        self.eventHandlers[eventName].push(callback);
+        return () => {
+          self.eventHandlers[eventName].splice(index, 1);
+        };
       },
       trigger: (
         eventName: "create" | "update" | "delete",
         storeName: keyof Schema,
         record: any
       ) => {
-        if (this.eventHandlers[eventName]) {
-          for (const callback of this.eventHandlers[eventName]) {
+        if (self.eventHandlers[eventName]) {
+          for (const callback of self.eventHandlers[eventName]) {
             callback(storeName, record);
           }
         }
+      },
+      off(
+        eventName: "create" | "update" | "delete",
+        callback: EventCallback<S>
+      ): void {
+        if (!self.eventHandlers[eventName]) return;
+
+        self.eventHandlers[eventName] = self.eventHandlers[eventName].filter(
+          (handler) => handler !== callback
+        );
+      },
+      once: (
+        eventName: "create" | "update" | "delete",
+        callback: EventCallback<S>
+      ) => {
+        const wrappedCallback = (storeName: keyof S, record: any) => {
+          callback(storeName, record);
+          self.events.off(eventName, wrappedCallback);
+        };
+
+        self.events.on(eventName, wrappedCallback);
       },
     };
   }
