@@ -25,6 +25,7 @@
   "files": [
     "orm.js",
     "orm.d.ts",
+    "CHANGELOG.md",
     "README.md"
   ],
   "keywords": [
