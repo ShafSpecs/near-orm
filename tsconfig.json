@@ -12,6 +12,6 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["./orm.ts"],
+  "include": ["./**/*.ts"],
   "exclude": ["dist", "./**/tests/**", "node_modules"]
 }

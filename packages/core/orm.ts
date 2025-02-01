@@ -93,6 +93,10 @@ export type ModelMethods<T extends ObjectStoreSchema> = {
   delete: (id: IdType<T>) => Promise<void>;
 };
 
+type SeedInput<S extends Schema> = {
+  [K in keyof S]?: CreateInput<S[K]>[];
+};
+
 type Versioning = { type: "auto" } | { type: "manual"; version: number };
 
 type WhereOperator = "equals" | "startsWith" | "endsWith";
@@ -323,22 +327,24 @@ export class ORM<S extends Schema> {
    *
    * @param data
    */
-  async seed(data: { [K in keyof S]?: InferModelShape<S[K]>[] }) {
+  async seed(data: SeedInput<S>) {
     const transaction = this.db.transaction(
-      Object.keys(this.schema),
+      Object.keys(data),
       "readwrite"
     );
 
     return new Promise<void>((resolve, reject) => {
       for (const storeName of Object.keys(data)) {
-        const records = data[storeName as keyof Schema]!;
+        const records = data[storeName as keyof S]!;
         const store = transaction.objectStore(storeName);
 
         for (const record of records) {
-          const request = store.add(record);
+          const fullData = this.applyDefaults(storeName as keyof S, record);
+          const request = store.add(fullData);
+          
           request.onerror = () => reject(request.error);
           request.onsuccess = () => {
-            this.events.trigger("create", storeName, record);
+            this.events.trigger("create", storeName, fullData);
           };
         }
       }

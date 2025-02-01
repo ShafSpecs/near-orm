@@ -1,0 +1,42 @@
+{
+  "name": "near-orm",
+  "type": "module",
+  "description": "A simple ORM for IndexedDB",
+  "version": "0.3.0",
+  "main": "./orm.js",
+  "module": "./orm.js",
+  "types": "./orm.d.ts",
+  "scripts": {
+    "build": "rimraf ./orm.js ./orm.d.ts && tsc",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ShafSpecs/near-orm.git",
+    "directory": "packages/core"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Abdur-Rahman Fashola",
+    "url": "https://github.com/ShafSpecs"
+  },
+  "files": [
+    "orm.js",
+    "orm.d.ts",
+    "README.md"
+  ],
+  "keywords": [
+    "indexeddb",
+    "orm",
+    "nearorm",
+    "database",
+    "db",
+    "indexeddb-orm"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false
+} 

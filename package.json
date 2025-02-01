@@ -1,52 +1,25 @@
 {
-  "name": "near-orm",
+  "name": "near-orm-project",
+  "private": true,
   "type": "module",
-  "description": "A simple ORM for IndexedDB",
-  "version": "0.3.0",
-  "main": "./orm.js",
-  "module": "./orm.js",
-  "types": "./orm.d.ts",
-  "scripts": {
-    "build": "rimraf ./orm.js ./orm.d.ts && tsc && node ./minify.js",
-    "prepublishOnly": "npm run build",
-    "test": "vitest run --coverage",
-    "test:watch": "vitest"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ShafSpecs/near-orm.git"
-  },
-  "license": "MIT",
-  "author": {
-    "name": "Abdur-Rahman Fashola",
-    "url": "https://github.com/ShafSpecs"
-  },
-  "files": [
-    "orm.js",
-    "orm.d.ts",
-    "README.md"
+  "workspaces": [
+    "packages/core"
   ],
   "devDependencies": {
     "@biomejs/biome": "^1.9.3",
     "@types/node": "^22.7.4",
     "@vitest/coverage-v8": "^2.1.2",
     "fake-indexeddb": "^6.0.0",
-    "pkg-pr-new": "^0.0.29",
+    "pkg-pr-new": "^0.0.39",
     "rimraf": "^6.0.1",
     "terser": "^5.34.1",
-    "typescript": "^5.6.2",
+    "typescript": "^5.7.3",
     "vitest": "^2.1.2"
   },
-  "keywords": [
-    "indexeddb",
-    "orm",
-    "nearorm",
-    "database",
-    "db",
-    "indexeddb-orm"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "sideEffects": false
+  "scripts": {
+    "build": "npm run build:orm && npm run minify",
+    "build:orm": "npm run build --workspaces",
+    "minify": "node ./minify.js",
+    "test": "npm run test --workspaces"
+  }
 }

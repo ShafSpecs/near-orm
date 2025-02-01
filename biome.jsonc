@@ -7,7 +7,7 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"ignore": ["test/**/*.ts", "node_modules", "orm.js", "orm.d.ts"]
+		"ignore": ["tests/**/*.ts", "node_modules", "./packages/**/*.js", "./packages/**/*.d.ts"]
 	},
 	"formatter": {
 		"enabled": true,
