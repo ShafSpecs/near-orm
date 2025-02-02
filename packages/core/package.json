@@ -2,7 +2,7 @@
   "name": "near-orm",
   "type": "module",
   "description": "A simple ORM for IndexedDB",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "main": "./orm.js",
   "module": "./orm.js",
   "types": "./orm.d.ts",
@@ -40,4 +40,4 @@
     "access": "public"
   },
   "sideEffects": false
-} 
+}
