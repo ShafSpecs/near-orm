@@ -2,13 +2,12 @@
   "name": "near-orm",
   "type": "module",
   "description": "A simple ORM for IndexedDB",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "main": "./orm.js",
   "module": "./orm.js",
   "types": "./orm.d.ts",
   "scripts": {
     "build": "rimraf ./orm.js ./orm.d.ts && tsc",
-    "prepublishOnly": "npm run build",
     "test": "vitest run --coverage",
     "test:watch": "vitest"
   },

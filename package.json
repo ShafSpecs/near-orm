@@ -20,6 +20,7 @@
     "build": "npm run build:orm && npm run minify",
     "build:orm": "npm run build --workspaces",
     "minify": "node ./minify.js",
+    "prepublishOnly": "npm run build",
     "test": "npm run test --workspaces"
   }
 }
