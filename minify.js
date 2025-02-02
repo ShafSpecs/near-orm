@@ -16,4 +16,4 @@ async function minifyFiles(filePaths) {
   }
 }
 
-minifyFiles(["./orm.js"]);
+minifyFiles(["./packages/core/orm.js"]);

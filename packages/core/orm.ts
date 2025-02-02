@@ -17,16 +17,18 @@ const fieldSymbol = Symbol("__isField");
 type FieldDefinitionWithMeta<
   T extends FieldType,
   HasDefault extends boolean,
-  IsPrimaryKey extends boolean
+  IsPrimaryKey extends boolean,
+  IsUnique extends boolean
 > = FieldDefinition<T> & {
   [fieldSymbol]: true;
   hasDefault: HasDefault;
   isPrimaryKey: IsPrimaryKey;
+  isUnique: IsUnique;
 };
 
 type ObjectStoreSchema = {
   fields: {
-    [fieldName: string]: FieldDefinitionWithMeta<FieldType, boolean, boolean>;
+    [fieldName: string]: FieldDefinitionWithMeta<FieldType, boolean, boolean, boolean>;
   };
 };
 
@@ -85,12 +87,41 @@ type UpdateInput<T extends ObjectStoreSchema> = Partial<
 
 type IdType<T extends ObjectStoreSchema> = PrimaryKey<T>[keyof PrimaryKey<T>];
 
+type UniqueFields<T extends ObjectStoreSchema> = {
+  [K in keyof T["fields"] as T["fields"][K]["isUnique"] extends true
+    ? K
+    : T["fields"][K]["isPrimaryKey"] extends true
+    ? K
+    : never]: InferFieldType<T["fields"][K]["type"]>;
+};
+
+/**
+ * Type helper to ensure at least one field is provided.
+ * 
+ * @example
+ * type Example = AtLeastOne<{ id: string; name: string }>
+ * // Example is now: { id: string } | { name: string } | { id: string; name: string }
+ */
+export type AtLeastOne<T> = {
+  [K in keyof T]: { [P in K]: T[P] } & Partial<Omit<T, K>>
+}[keyof T];
+
+
 export type ModelMethods<T extends ObjectStoreSchema> = {
   create: (data: CreateInput<T>) => Promise<InferModelShape<T>>;
   findAll: () => Promise<InferModelShape<T>[]>;
   findById: (id: IdType<T>) => Promise<InferModelShape<T> | undefined>;
   update: (id: IdType<T>, data: UpdateInput<T>) => Promise<InferModelShape<T>>;
   delete: (id: IdType<T>) => Promise<void>;
+  upsert: (params: {
+    where: AtLeastOne<UniqueFields<T>>;
+    create: CreateInput<T>;
+    update: UpdateInput<T>;
+  }) => Promise<InferModelShape<T>>;
+};
+
+type SeedInput<S extends Schema> = {
+  [K in keyof S]?: CreateInput<S[K]>[];
 };
 
 type Versioning = { type: "auto" } | { type: "manual"; version: number };
@@ -206,10 +237,6 @@ class QueryBuilder<T> {
   }
 }
 
-export type BackupData<S extends Schema> = {
-  [K in keyof S]?: S[K]["fields"][];
-};
-
 export type EventCallback<S extends Schema> = (
   storeName: keyof S,
   record: any
@@ -323,22 +350,24 @@ export class ORM<S extends Schema> {
    *
    * @param data
    */
-  async seed(data: { [K in keyof S]?: InferModelShape<S[K]>[] }) {
+  async seed(data: SeedInput<S>) {
     const transaction = this.db.transaction(
-      Object.keys(this.schema),
+      Object.keys(data),
       "readwrite"
     );
 
     return new Promise<void>((resolve, reject) => {
       for (const storeName of Object.keys(data)) {
-        const records = data[storeName as keyof Schema]!;
+        const records = data[storeName as keyof S]!;
         const store = transaction.objectStore(storeName);
 
         for (const record of records) {
-          const request = store.add(record);
+          const fullData = this.applyDefaults(storeName as keyof S, record);
+          const request = store.add(fullData);
+          
           request.onerror = () => reject(request.error);
           request.onsuccess = () => {
-            this.events.trigger("create", storeName, record);
+            this.events.trigger("create", storeName, fullData);
           };
         }
       }
@@ -824,6 +853,79 @@ export class ORM<S extends Schema> {
           };
         });
       },
+      upsert: async (params: {
+        where: AtLeastOne<UniqueFields<S[K]>>;
+        create: CreateInput<S[K]>;
+        update: UpdateInput<S[K]>;
+      }): Promise<InferModelShape<S[K]>> => {
+        return new Promise((resolve, reject) => {
+          let transaction: IDBTransaction;
+          if (__transaction) {
+            transaction = __transaction;
+          } else {
+            transaction = this.db.transaction([storeName as string], "readwrite");
+          }
+          
+          const store = transaction.objectStore(storeName as string);
+          const whereEntries = Object.entries(params.where);
+
+          if (whereEntries.length === 0) {
+            reject(new Error("Where clause is required."));
+            return;
+          }
+
+          const matchesWhere = (record: any) => {
+            return whereEntries.every(([key, value]) => record[key] === value);
+          };
+
+          const request = store.openCursor();
+          
+          request.onerror = () => reject(request.error);
+          request.onsuccess = (event) => {
+            const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+            
+            if (cursor) {
+              const record = cursor.value;
+              
+              if (matchesWhere(record)) {
+                const updatedData = { ...record, ...params.update };
+                const updateRequest = store.put(updatedData);
+                
+                updateRequest.onerror = () => reject(updateRequest.error);
+                updateRequest.onsuccess = () => {
+                  this.events.trigger("update", storeName as string, updatedData);
+                  resolve(updatedData as InferModelShape<S[K]>);
+                };
+                return;
+              }
+              
+              cursor.continue();
+            } else {
+              const fullData = this.applyDefaults(storeName, params.create);
+              const createRequest = store.add(fullData);
+              
+              createRequest.onerror = () => reject(createRequest.error);
+              createRequest.onsuccess = () => {
+                const primaryKeyField = Object.keys(this.schema[storeName].fields).find(
+                  (fieldName) => this.schema[storeName].fields[fieldName].primaryKey
+                );
+                
+                if (!primaryKeyField) {
+                  throw new Error(`No primary key defined for object store "${storeName as string}"`);
+                }
+                
+                const resultData = {
+                  ...fullData,
+                  [primaryKeyField]: createRequest.result
+                };
+                
+                this.events.trigger("create", storeName as string, resultData);
+                resolve(resultData as InferModelShape<S[K]>);
+              };
+            }
+          };
+        });
+      }
     };
   }
 
@@ -871,15 +973,19 @@ export class ORM<S extends Schema> {
 export function field<
   T extends FieldType,
   U extends DefaultValueForType<T> | undefined = undefined,
-  V extends boolean | undefined = undefined
+  V extends boolean | undefined = undefined,
+  W extends boolean | undefined = undefined
 >(
   definition: FieldDefinition<T> &
     (U extends undefined ? unknown : { default: U }) &
-    (V extends undefined ? unknown : { primaryKey: V })
+    (V extends undefined ? unknown : { primaryKey: V }) &
+    (W extends undefined ? unknown : { unique: W })
 ): FieldDefinitionWithMeta<
+
   T,
   U extends undefined ? false : true,
-  V extends undefined ? false : true
+  V extends undefined ? false : true,
+  W extends undefined ? false : true
 > {
   if (
     definition.primaryKey &&
@@ -924,17 +1030,21 @@ export function field<
 
   const hasDefault = !!definition.default;
   const isPrimaryKey = !!definition.primaryKey;
+  const isUnique = !!definition.unique;
 
   return Object.assign(definition, {
     [fieldSymbol]: true as const,
     hasDefault,
     isPrimaryKey,
+    isUnique
   }) as unknown as FieldDefinitionWithMeta<
     T,
     U extends undefined ? false : true,
-    V extends undefined ? false : true
+    V extends undefined ? false : true,
+    W extends undefined ? false : true
   >;
 }
+
 
 /**
  * Utility to define a valid schema for the database.
