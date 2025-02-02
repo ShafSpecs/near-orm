@@ -1,6 +1,5 @@
-
-import { describe, test, expect, beforeEach, afterEach } from 'vitest'
-import { ORM, defineSchema, field } from '../packages/core/orm'
+import { describe, test, expect, beforeEach, afterEach, expectTypeOf } from 'vitest'
+import { AtLeastOne, ORM, defineSchema, field } from '../packages/core/orm'
 
 const schema = defineSchema({
   users: {
@@ -169,6 +168,113 @@ describe('Near ORM', () => {
         const user = await db.models.users.findById('1')
         expect(user).toBeUndefined()
       })
+    })
+
+    describe('Upsert', () => {
+      test('should create new record if not found', async () => {
+        const user = await db.models.users.upsert({
+          where: { email: 'john@example.com' },
+          create: {
+            id: '1',
+            name: 'John Doe',
+            email: 'john@example.com'
+          },
+          update: {
+            name: 'John Smith'
+          }
+        });
+  
+        expect(user).toMatchObject({
+          id: '1',
+          name: 'John Doe',
+          email: 'john@example.com'
+        });
+        expect(user.createdAt).toBeInstanceOf(Date);
+      });
+  
+      test('should update existing record if found', async () => {
+        await db.models.users.create({
+          id: '1',
+          name: 'John Doe',
+          email: 'john@example.com'
+        });
+  
+        const updated = await db.models.users.upsert({
+          where: { email: 'john@example.com' },
+          create: {
+            id: '2',
+            name: 'New User',
+            email: 'john@example.com'
+          },
+          update: {
+            name: 'John Smith'
+          }
+        });
+  
+        expect(updated).toMatchObject({
+          id: '1',
+          name: 'John Smith',
+          email: 'john@example.com'
+        });
+      });
+  
+      test('should respect unique constraints', async () => {
+        await db.models.users.create({
+          id: '1',
+          name: 'John Doe',
+          email: 'john@example.com'
+        });
+  
+        await db.models.users.create({
+          id: '2',
+          name: 'Jane Doe',
+          email: 'jane@example.com'
+        });
+  
+        await expect(db.models.users.upsert({
+          where: { id: '2' },
+          create: {
+            id: '2',
+            name: 'New User',
+            email: 'john@example.com' // This email is already taken
+          },
+          update: {
+            email: 'john@example.com' // This email is already taken
+          }
+        })).rejects.toThrow();
+      });
+
+      test('should only allow unique/primary key fields in where clause', async () => {
+        type WhereClause = Parameters<typeof db.models.users.upsert>[0]['where'];
+        type ExpectedType = AtLeastOne<{
+          id: string;
+          email: string;
+        }>;
+
+        expectTypeOf<WhereClause>().toEqualTypeOf<ExpectedType>();
+
+        await db.models.users.create({
+          id: '1',
+          name: 'John Doe',
+          email: 'john@example.com'
+        });
+
+        const result = await db.models.users.upsert({
+          where: { email: 'john@example.com' },
+          create: {
+            id: '2',
+            name: 'New User',
+            email: 'john@example.com'
+          },
+          update: {
+            name: 'Updated Name'
+          }
+        });
+
+        expect(result.id).toBe('1');
+        expect(result.name).toBe('Updated Name');
+        expect(result.email).toBe('john@example.com');
+      });
     })
   })
 
