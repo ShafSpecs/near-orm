@@ -31,6 +31,7 @@
       - [Update](#update)
       - [Delete](#delete)
       - [Read](#read)
+      - [Upsert](#upsert)
     - [Querying](#querying)
     - [Migrations](#migrations)
     - [Transactions](#transactions)
@@ -46,7 +47,7 @@
       - [`create`](#create-1)
       - [`update`](#update-1)
       - [`delete`](#delete-1)
-      - [`upsert`](#upsert)
+      - [`upsert`](#upsert-1)
       - [`findById`](#findbyid)
       - [`findAll`](#findall)
     - [`query`](#query)
@@ -163,6 +164,21 @@ const users = await db.models.users.findAll()
 ```
 
 This fetches all records from the `users` table.
+
+#### Upsert
+
+Creates a record if it doesn't exist, or updates it if it does.
+
+```ts
+await db.models.users.upsert({
+  where: { id: '1' },
+  create: { id: '1', name: 'James', email: 'james@example.com' },
+  update: { name: 'John Doe' }
+})
+```
+
+
+This would create a new record if it doesn't exist, or update the existing record if it does.
 
 [⬆️ Back to top](#toc)
 
