@@ -11,61 +11,62 @@
 - 🔒 Type-safe migrations
 - 📡 Event system
 
-**What's new in v0.3.0?**
+**What's new in v0.4.0?**
 
-- Seeding your database now triggers the `create` event for each record seeded.
-- Added the `once` method to the event system, allowing you to listen to an event once.
-- Added the `off` method to the event system, allowing you to unsubscribe from an event.
-- Returns an unsubscribe function from the `on` method, allowing you to clean up effectively.
+- Updated seeding! When seeding, you no longer need to include fields that have defaults.
+- Added an `upsert` method. Create or update a record in one go.
 
 <div id="toc"></div>
 
 ## Table of Content
 
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-   - [Defining Schema](#defining-schema)
-   - [Initialising ORM](#initialising-orm)
-   - [CRUD Operations](#crud-operations)
+- [Near ORM](#near-orm)
+  - [Table of Content](#table-of-content)
+  - [Installation](#installation)
+  - [Quick Start](#quick-start)
+    - [Defining Schema](#defining-schema)
+    - [Initialising ORM](#initialising-orm)
+    - [CRUD Operations](#crud-operations)
       - [Create](#create)
       - [Update](#update)
       - [Delete](#delete)
       - [Read](#read)
-   - [Querying](#querying)
-   - [Migrations](#migrations)
-   - [Transactions](#transactions)
-   - [Seeding](#seeding)
-   - [Events](#events)
-   - [Going Raw](#going-raw)
-   - [Metadata](#metadata)
-- [API Documentation](#api-documentation)
-   - [`init`](#init)
-   - [`defineSchema`](#defineschema)
-   - [`field`](#field)
-   - [`models`](#models)
+    - [Querying](#querying)
+    - [Migrations](#migrations)
+    - [Transactions](#transactions)
+    - [Seeding](#seeding)
+    - [Events](#events)
+    - [Going Raw](#going-raw)
+    - [Metadata](#metadata)
+  - [API Documentation](#api-documentation)
+    - [`init`](#init)
+    - [`defineSchema`](#defineschema)
+    - [`field`](#field)
+    - [`models`](#models)
       - [`create`](#create-1)
       - [`update`](#update-1)
       - [`delete`](#delete-1)
+      - [`upsert`](#upsert)
       - [`findById`](#findbyid)
       - [`findAll`](#findall)
-   - [`query`](#query)
-   - [`QueryBuilder`](#querybuilder)
+    - [`query`](#query)
+    - [`QueryBuilder`](#querybuilder)
       - [`where`](#where)
       - [`orderBy`](#orderby)
       - [`offset`](#offset)
       - [`limit`](#limit)
       - [`run`](#run)
-   - [`meta`](#meta)
-   - [`transaction`](#transaction)
-   - [`seed`](#seed)
-   - [`migrate`](#migrate)
-   - [`events`](#events-1)
+    - [`meta`](#meta)
+    - [`transaction`](#transaction)
+    - [`seed`](#seed)
+    - [`migrate`](#migrate)
+    - [`events`](#events-1)
       - [`on`](#on)
       - [`trigger`](#trigger)
       - [`off`](#off)
       - [`once`](#once)
-   - [`raw`](#raw)
-- [License](#license)
+    - [`raw`](#raw)
+  - [License](#license)
 
 ## Installation
 
@@ -248,7 +249,11 @@ Read more about IndexedDB transactions [here](https://developer.mozilla.org/en-U
 
 Seeding is the process of populating your database with data. This is useful for testing and ensuring that your database is populated with the correct data.
 
+> [!NOTE]
+> When seeding in v0.4.0 and upwards, you no longer require to include fields that have defaults.
+
 ```ts
+
 await db.seed({
   users: [
     { 
@@ -504,6 +509,31 @@ Deletes a record from your table.
 
 ```ts
 await db.models['name-of-your-table'].delete('id')
+```
+
+#### `upsert`
+
+Creates a record if it doesn't exist, or updates it if it does.
+
+**Signature:**
+
+```ts
+upsert(params: {
+  // Requires at least one or more unique fields or primary key field
+  where: AtLeastOne<UniqueFields<T>>;
+  create: CreateInput<T>;
+  update: UpdateInput<T>;
+}) => Promise<InferModelShape<T>>;
+```
+
+**Example:**
+
+```ts
+await db.models['name-of-your-table'].upsert({
+  where: { id: '1' },
+  create: { id: '1', name: 'Abbad', email: 'abbad@example.com' },
+  update: { name: 'Abbad', email: 'abbad@example.com' }
+})
 ```
 
 #### `findById`

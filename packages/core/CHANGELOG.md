@@ -1,4 +1,7 @@
-<!-- Seeding now dont require defaults (0.4) -->
+# 0.4.0
+
+- Updated seeding! When seeding, you no longer need to include fields that have defaults.
+- Added an `upsert` method. Create or update a record in one go.
 
 ## 0.3.0
 
